@@ -1,4 +1,9 @@
 #!/bin/bash
 
-cp init-cli.sh /usr/local/bin
-cp cli.sh /usr/local/bin
+dest="$1"
+if [[ -z "$dest" ]] ; then
+    dest='/usr/local/bin'
+fi
+
+cp init-cli.sh $dest
+cp cli.sh $dest
