@@ -195,7 +195,7 @@ print_args_errors() {
 
     if [[ -n "$(echo "$expected_args" | tr -d ' ')" ]] ; then
         2>&1 echo -n 'Expected arguments: '
-        for arg in "$expected_args" ; do
+        for arg in $expected_args ; do
             rc=$(grep -P "^${arg}:" "$CMD_ARGS_FILE")
             short=$(echo "$rc" | cut -d: -f3)
             long=$(echo "$rc" | cut -d: -f4)
@@ -209,8 +209,6 @@ print_args_errors() {
             elif [[ -n "$short" ]] && [[ -n "$long" ]] ; then
                 echo -n "${short}/${long} "
             fi
-
-            echo -n "${arg} "
         done
 
         echo -e "\n"
