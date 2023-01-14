@@ -57,7 +57,7 @@ usage() {
         done
         echo
 
-        if [[ "$(echo -n "$positional_args" | wc -l)" != '0' ]] ; then
+        if [[ -n "$(echo $positional_args | tr -d ' ')" ]] ; then
             echo -e '\nPositional Arguments:'
         fi
 
