@@ -111,7 +111,8 @@ parse_args() {
     positional_count="$(grep -P '^[a-zA-Z_][a-zA-Z0-9_-]*:(true|false)::::.*$' "$CMD_ARGS_FILE" | wc -l)"
     seen_positional=0
 
-    expected_args="$(grep -P '^[a-zA-Z_][a-zA-Z0-9_-]*:true:(-[a-zA-Z0-9])?:(--[a-zA-Z0-9]+)?:([0-9]+)?:.*$' "$CMD_ARGS_FILE" | cut -d: -f1 | tr '\n' ' ')"
+    expected_flags="$(grep -P '^[a-zA-Z_][a-zA-Z0-9_-]*:true:(-[a-zA-Z0-9])?:(--[a-zA-Z0-9]+)?:[0-9]+:.*$' "$CMD_ARGS_FILE" | cut -d: -f1 | tr '\n' ' ')"
+    expected_args="$(grep -P '^[a-zA-Z_][a-zA-Z0-9_-]*:true::::.*$' "$CMD_ARGS_FILE" | cut -d: -f1 | tr '\n' ' ')"
 
     remaining_args=()
     unexpected_args=()
@@ -132,7 +133,7 @@ parse_args() {
                 nargs="$(echo "$record" | cut -d: -f5)"
                 
                 if [[ -n "$varname" ]] ; then
-                    expected_args="$(echo "$varname" | tr ' ' '\n' | grep -v -e "$varname" | tr '\n' ' ')"
+                    expected_flags="$(echo "$expected_flags" | tr ' ' '\n' | grep -v -e "$varname" | tr '\n' ' ')"
                 fi
 
                 # num args
@@ -153,12 +154,13 @@ parse_args() {
                     seen_positional=$((seen_positional + 1))
                     varname="$(grep -m$seen_positional -P '^[a-zA-Z_][a-zA-Z0-9_-]*:(true|false)::::.*$' "$CMD_ARGS_FILE" | tail -n1 | cut -d: -f1)"
                     eval "${varname}='${arg}'"
+                    expected_args="$(echo "$expected_args" | tr ' ' '\n' | grep -v -e "$varname" | tr '\n' ' ')"
                 fi
                 ;;
         esac
     done
 
-    if [[ "${#unexpected_args}" != '0' ]] || [[ -n "$(echo "$expected_args" | tr -d ' ')" ]] ; then
+    if [[ "${#unexpected_args}" != '0' ]] || [[ -n "$(echo "$expected_flags" | tr -d ' ')" ]] ; then
         return 1
     fi
 
@@ -193,28 +195,52 @@ print_args_errors() {
         return 1
     fi
 
-    if [[ -n "$(echo "$expected_args" | tr -d ' ')" ]] ; then
+    has_prefix='false'
+    if [[ -n "$(echo "$expected_flags" | tr -d ' ')" ]] ; then
         2>&1 echo -n 'Expected arguments: '
-        for arg in $expected_args ; do
+        has_prefix='true'
+        for arg in $expected_flags ; do
             rc=$(grep -P "^${arg}:" "$CMD_ARGS_FILE")
             short=$(echo "$rc" | cut -d: -f3)
             long=$(echo "$rc" | cut -d: -f4)
 
             if [[ -z "$short" ]] && [[ -z "$long" ]] ; then
-                echo -n "${arg} "
+                2>&1 echo -n "${arg} "
             elif [[ -n "$short" ]] && [[ -z "$long" ]] ; then
-                echo -n "${short} "
+                2>&1 echo -n "${short} "
             elif [[ -z "$short" ]] && [[ -n "$long" ]] ; then
-                echo -n "${long} "
+                2>&1 echo -n "${long} "
             elif [[ -n "$short" ]] && [[ -n "$long" ]] ; then
-                echo -n "${short}/${long} "
+                2>&1 echo -n "${short}/${long} "
             fi
         done
+
+        2>&1 echo -e "\n"
+        usage
+
+        return 1
+    fi
+
+    if [[ -n "$(echo "$expected_args" | tr -d ' ')" ]] ; then
+        if ! $has_prefix ; then
+            2>&1 echo -n 'Expected arguments: '
+        fi
+        echo "$expected_args"
 
         echo -e "\n"
         usage
 
         return 1
+    fi
+}
+
+print_child_commands() {
+    cmds="$(ls -1 ${CMD_CHILD_DIR}/*.sh | sed 's#.*/##')"
+    if [[ -n "$cmds" ]] ; then
+        echo -e "\nAvaiable Commands:"
+        for cmd in "$cmds" ; do
+            echo "  ${cmd%.sh}"
+        done
     fi
 }
 
