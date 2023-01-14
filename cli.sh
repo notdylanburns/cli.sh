@@ -111,7 +111,7 @@ parse_args() {
     positional_count="$(grep -P '^[a-zA-Z_][a-zA-Z0-9_-]*:(true|false)::::.*$' "$CMD_ARGS_FILE" | wc -l)"
     seen_positional=0
 
-    expected_args="$(grep -P '^[a-zA-Z_][a-zA-Z0-9_-]*:true:(-[a-zA-Z0-9])?:(--[a-zA-Z0-9]+)?:[0-9]+:.*$' "$CMD_ARGS_FILE" | cut -d: -f3 | tr '\n' ' ')"
+    expected_args="$(grep -P '^[a-zA-Z_][a-zA-Z0-9_-]*:true:(-[a-zA-Z0-9])?:(--[a-zA-Z0-9]+)?:([0-9]+)?:.*$' "$CMD_ARGS_FILE" | cut -d: -f1 | tr '\n' ' ')"
 
     remaining_args=()
     unexpected_args=()
@@ -131,9 +131,8 @@ parse_args() {
                 varname="$(echo "$record" | cut -d: -f1)"
                 nargs="$(echo "$record" | cut -d: -f5)"
                 
-                short_form="$(echo "$record" | cut -d: -f3)"
-                if [[ -n "$short_form" ]] ; then
-                    expected_args="$(echo "$expected_args" | tr ' ' '\n' | grep -v -e "$short_form" | tr '\n' ' ')"
+                if [[ -n "$varname" ]] ; then
+                    expected_args="$(echo "$varname" | tr ' ' '\n' | grep -v -e "$varname" | tr '\n' ' ')"
                 fi
 
                 # num args
