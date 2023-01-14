@@ -64,7 +64,7 @@ fi << EOF
 source "${cli_libpath}/cli.sh"
 source "\$(dirname \$(realpath \$0))/${cli_name}.rc"
 
-export CMD_ARGS_FILE="\$0.args"
+export CMD_ARGS_FILE="\${CLI_SH_ROOT_NAME}.args"
 export CMD_CALLED_AS="\$0"
 export CMD_CHILD_DIR="\$CLI_SH_CMD"
 
