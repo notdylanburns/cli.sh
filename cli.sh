@@ -192,6 +192,11 @@ print_args_errors() {
     fi
 }
 
-call_child_command() {
-    
+find_child_command() {
+    if [[ -f "${CLI_SH_CMD}/${command}.sh" ]] ; then
+        echo "${CLI_SH_CMD}/${command}.sh"
+        return 0
+    fi
+
+    return 1
 }
