@@ -166,6 +166,21 @@ parse_args() {
 }
 
 print_args_errors() {
+    if [[ -z "$CMD_ARGS_FILE" ]] ; then
+        2>&1 echo "\$CMD_ARGS_FILE was expected to contain the path of a .args file"
+        return 1
+    fi
+
+    if [[ ! -f "$CMD_ARGS_FILE" ]] ; then
+        2>&1 echo "\$CMD_ARGS_FILE does not contain a valid path to an .args file"
+        return 1
+    fi
+
+    if ! validate_args_file "$CMD_ARGS_FILE" ; then
+        2>&1 echo -e "\nArgs file validation failed"
+        return 1
+    fi
+
     if [[ "${#unexpected_args}" != '0' ]] ; then
         2>&1 echo -n 'Unexpected arguments: '
         for arg in "${unexpected_args[@]}" ; do
@@ -181,6 +196,20 @@ print_args_errors() {
     if [[ -n "$(echo "$expected_args" | tr -d ' ')" ]] ; then
         2>&1 echo -n 'Expected arguments: '
         for arg in "$expected_args" ; do
+            rc=$(grep -P "^${arg}:" "$CMD_ARGS_FILE")
+            short=$(echo "$rc" | cut -d: -f3)
+            long=$(echo "$rc" | cut -d: -f4)
+
+            if [[ -z "$short" ]] && [[ -z "$long" ]] ; then
+                echo -n "${arg} "
+            elif [[ -n "$short" ]] && [[ -z "$long" ]] ; then
+                echo -n "${short} "
+            elif [[ -z "$short" ]] && [[ -n "$long" ]] ; then
+                echo -n "${long} "
+            elif [[ -n "$short" ]] && [[ -n "$long" ]] ; then
+                echo -n "${short}/${long} "
+            fi
+
             echo -n "${arg} "
         done
 
