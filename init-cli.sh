@@ -25,7 +25,6 @@ if [[ -z "$path" ]] || [[ ! -d "$path" ]] ; then
     exit 1
 fi
 
-var_cli_name=$(echo "${cli_name^^}" | tr '-' '_')
 fullpath=$(realpath "$path")
 
 echo -e "\e[1;32mCreating cmd dir at \e[36m${fullpath}/cmd\e[32m...\e[0m"
@@ -38,9 +37,9 @@ echo -e "\e[1;32mGenerating ${cli_name}.rc file at filepath \e[36m${fullpath}/${
 if ! tee "${fullpath}/${cli_name}.rc" ; then
     exit 1
 fi << EOF
-export CLI_SH_ROOT_NAME='${var_cli_name}'
-export ${var_cli_name}_ROOT="${fullpath}"
-export ${var_cli_name}_CMD="${fullpath}/cmd"
+export CLI_SH_ROOT_NAME='${cli_name}'
+export CLI_SH_ROOT="${fullpath}"
+export CLI_SH_CMD="${fullpath}/cmd"
 EOF
 
 echo -e "\n"
@@ -67,6 +66,7 @@ source "\$(dirname \$(realpath \$0))/${cli_name}.rc"
 
 export CMD_ARGS_FILE="\$0.args"
 export CMD_CALLED_AS="\$0"
+export CMD_CHILD_DIR="\$CLI_SH_CMD"
 
 help() {
     echo "${cli_name}: your description here"
