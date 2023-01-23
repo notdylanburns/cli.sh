@@ -20,6 +20,8 @@ long_flag_pos='4'
 arg_count_pos='5'
 description_pos='6'
 
+expected_field_count='6'
+
 import() {
     source "${CLI_SH_LIB}/${1}.rc"
 }
@@ -35,6 +37,23 @@ extract_arg_field() {
     echo "$record" | cut -d':' -f$field
 }
 
+_print_arg_file_error() {
+    if ! $has_printed_prefix ; then
+        2>&1 echo -e "\e[1;31merror:\e[0m invalid args file '${CMD_ARGS_FILE}'\n"
+        has_printed_prefix='true'
+    fi
+
+    msg="$1"
+    line="$2"
+
+    file=$(echo -n "$line" | cut -d':' -f1)
+    line_no=$(echo -n "$line" | cut -d':' -f2)
+    content=$(echo -n "$line" | cut -d':' -f3-)
+
+    echo -e "${msg}:"
+    echo -e "  \e[36m${file}\e[0m:\e[32m${line_no}\e[0m:  \`${content}\`\n"
+}
+
 validate_args_file() {
     if [[ -z "$CMD_ARGS_FILE" ]] ; then
         2>&1 echo "\$CMD_ARGS_FILE was expected to contain the path of a .args file"
@@ -46,16 +65,57 @@ validate_args_file() {
         return 1
     fi
 
-    if errors=$(grep -HnPv "$valid_argument_re" "$CMD_ARGS_FILE") ; then
-        2>&1 echo -e "\e[1;31merror:\e[0m invalid args file '${CMD_ARGS_FILE}'\n"
+    has_printed_prefix='false'
+    has_required_positional='false'
 
-        echo "'''"
-        local IFS=
-        while read -r line; do
-            2>&1 echo -e "\e[36m$(echo "$line" | sed -e 's/:/\\e[0m:\\e[32m/1' -e 's/:/\\e[0m:/2')"
-        done <<< "$errors"
-        echo "'''"
+    while read -r line ; do
+        content=$(echo -n "$line" | cut -d':' -f3-)
 
+        if echo "$content" | grep -P "$valid_argument_re" >/dev/null ; then
+            continue
+        fi
+
+        # invalid field count
+        field_count=$(echo -n "$content" | sed 's/[^:]//g' | wc -m)
+        if [[ "$((field_count + 1))" != "$expected_field_count" ]] ; then
+            2>&1 _print_arg_file_error "invalid number of fields (have $((field_count + 1)), expected ${expected_field_count})" "$line"
+            continue
+        fi
+
+        if ! echo "$content" | grep -P "^${arg_name_re}:.*$" >/dev/null ; then
+            2>&1 _print_arg_file_error "invalid argument name" "$line"
+            continue
+        fi
+
+        if ! echo "$content" | grep -P "^${arg_name_re}:${required_re}:.*$" >/dev/null ; then
+            2>&1 _print_arg_file_error "second field is required to be either true or false" "$line"
+            continue
+        fi
+
+        if echo "$content" | grep -P "^${arg_name_re}:${required_re}:(?!:|${short_flag_re})[^:]+:.*$" >/dev/null ; then
+            2>&1 _print_arg_file_error "invalid flag short form" "$line"
+            continue
+        fi
+
+        if echo "$content" | grep -P "^${arg_name_re}:${required_re}:${short_flag_re}?:(?!:|${long_flag_re})[^:]+:.*$" >/dev/null ; then
+            2>&1 _print_arg_file_error "invalid flag long form" "$line"
+            continue
+        fi
+
+        if echo "$content" | grep -P "^${arg_name_re}:${required_re}:::.*:.*$" >/dev/null ; then
+            2>&1 _print_arg_file_error "positional arguments cannot have an argument count" "$line"
+            continue
+        fi
+
+        if ! echo "$content" | grep -P "^${arg_name_re}:${required_re}:.*:.*:${arg_count_re}:.*$" >/dev/null ; then
+            2>&1 _print_arg_file_error "invalid argument count (must be a positive decimal integer)" "$line"
+            continue
+        fi
+
+        2>&1 _print_arg_file_error "invalid arg file entry" "$line"
+    done <<< "$(grep -Hn '' "$CMD_ARGS_FILE")"
+
+    if $has_printed_prefix ; then
         return 1
     fi
 
