@@ -37,6 +37,8 @@ example-cli command1 subcommand2
 example-cli command2
 ```
 
+The example-cli.rc file is created by init-cli.sh and contains project-wide environment variables. Feel free to add your own logic into this file.
+
 ## .args files
 
 .args files represent the flags and positional arguments that a cli will accept. The file consists of defined fields delimeted by ':'.
